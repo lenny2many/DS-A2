@@ -8,9 +8,9 @@ import java.nio.file.Paths;
 
 public class GETClient {
 
-    private static final String HOST = "httpbin.org";
-    private static final int PORT = 80;
-    private static final String GETRequest = "GETRequest.txt";
+    private static final String HOST = "127.0.0.1";
+    private static final int PORT = 4567;
+    private static final String GETRequest = "src/resources/GETRequest.txt";
 
     public static void main(String[] args) {
         try (Socket socket = new Socket(HOST, PORT);
