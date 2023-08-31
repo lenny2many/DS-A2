@@ -1,4 +1,4 @@
-package content_server.src;
+package content_server;
 
 import java.io.BufferedReader;
 import java.io.IOException;
