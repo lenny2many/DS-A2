@@ -11,8 +11,8 @@ public class HTTPConnection implements AutoCloseable {
     protected OutputStreamWriter out;
     protected BufferedReader in;
 
-    public HTTPConnection(String host, int port) throws IOException {
-        this.socket = new Socket(host, port);
+    public HTTPConnection(Socket socket) throws IOException {
+        this.socket = socket;
         this.out = new OutputStreamWriter(socket.getOutputStream(), "UTF-8");
         this.in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
     }
@@ -26,8 +26,14 @@ public class HTTPConnection implements AutoCloseable {
         StringBuilder response = new StringBuilder();
         String line;
         while ((line = in.readLine()) != null) {
-            response.append(line).append("\n");
+            response.append(line).append("\r\n");
         }
+
+        // Remove the last newline character
+        if (response.length() > 0) {
+            response.setLength(response.length() - 2);
+        }
+
         return response.toString();
     }
 
