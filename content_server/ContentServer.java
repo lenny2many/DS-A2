@@ -1,13 +1,18 @@
 package content_server;
 
 import java.io.IOException;
+import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
+import client.GETClient;
 import common.http.HTTPClient;
 
 
-public class ContentServer extends HTTPClient {    
+public class ContentServer extends HTTPClient {
+    private static final String HOST = "127.0.0.1";
+    private static final int PORT = 4567;
+    
     private final String request_location = "content_server/resources/PUTRequest.txt";
     private final String payload_file = "content_server/resources/WeatherData.txt";
 
@@ -20,6 +25,10 @@ public class ContentServer extends HTTPClient {
     }
 
     public static void main(String[] args) {
-        new ContentServer().run();
+        try {
+            new ContentServer().run(new Socket(HOST, PORT));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }
