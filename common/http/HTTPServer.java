@@ -14,8 +14,8 @@ public abstract class HTTPServer implements AutoCloseable {
         System.out.println("Server started and listening on port " + serverSocket.getLocalPort());
     }
 
-    public abstract String buildGETResponse();
-    public abstract String buildPUTResponse();
+    public abstract String handleGETRequest(HTTPRequest httpRequest);
+    public abstract String handlePUTRequest(HTTPRequest httpRequest);
 
     public void receiveClientRequest(Socket clientSocket) {
         try (HTTPConnection conn = new HTTPConnection(clientSocket);) {
@@ -25,14 +25,14 @@ public abstract class HTTPServer implements AutoCloseable {
             switch (httpRequest.getRequestMethod()) {
                 case "GET":
                     System.out.println("GET request received");
-                    httpResponse = this.buildGETResponse();
+                    httpResponse = this.handleGETRequest(httpRequest);
                     break;
                 case "POST":
                     System.out.println("POST request received");
                     break;
                 case "PUT":
                     System.out.println("PUT request received");
-                    httpResponse = this.buildPUTResponse();
+                    httpResponse = this.handlePUTRequest(httpRequest);
                     break;
                 case "DELETE":
                     System.out.println("DELETE request received");
