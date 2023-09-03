@@ -1,12 +1,17 @@
 package aggregation_server;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.net.ServerSocket;
 import java.nio.file.Files;
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Deque;
+import java.util.LinkedList;
 
 import common.http.HTTPServer;
 import common.http.messages.HTTPRequest;
@@ -15,17 +20,82 @@ import common.http.messages.HTTPRequest;
 public class AggregationServer extends HTTPServer {
     private static final int PORT = 4567;
 
-    private static final String DATA_FILE = "aggregation_server/resources/data.txt";
-    private static List<WeatherUpdate> weatherUpdates = new ArrayList<>();
+    private static final String DATA_FILE = "aggregation_server/resources/WeatherData.txt";
+    private AggregatedWeatherData aggregatedWeatherData;
+    
 
-    private class WeatherUpdate {
-        String contentServerID;
-        ZonedDateTime lastUpdated;
-        String weatherData;
+    private static class AggregatedWeatherData implements Serializable {
+        private static final int MAX_UPDATES = 20;
+        private Deque<WeatherData> recentUpdates = new LinkedList<>();
+         
+        private static class WeatherData implements Serializable {
+            String weatherData;
+            ZonedDateTime lastUpdated;
+
+            public WeatherData(String weatherData, ZonedDateTime lastUpdated) {
+                this.lastUpdated = lastUpdated;
+                this.weatherData = weatherData;
+            }
+        }
+
+        public AggregatedWeatherData() {
+            try {
+                readFromFile();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            if (recentUpdates == null) {
+                recentUpdates = new LinkedList<>();
+            }
+        }
+
+        public void addUpdate(String newData) {
+            recentUpdates.addLast(new WeatherData(newData, ZonedDateTime.now()));
+    
+            if (recentUpdates.size() > MAX_UPDATES) {
+                recentUpdates.removeFirst();
+            }
+        }
+
+        public void writeToFile() throws IOException {
+            // Write the recentUpdates queue to the data file
+            System.out.println("Writing to data file");
+
+            try (FileOutputStream fileOut = new FileOutputStream(DATA_FILE);
+                ObjectOutputStream out = new ObjectOutputStream(fileOut)) {
+                out.writeObject(recentUpdates);
+            } catch (IOException i) {
+                i.printStackTrace();
+            }
+        }
+
+        @SuppressWarnings("unchecked")
+        public void readFromFile() throws IOException, ClassNotFoundException {
+            // Check if file exists
+            File dataFile = new File(DATA_FILE);
+            if (!dataFile.exists()) {
+                System.out.println("Data file not found.");
+                return;
+            }
+            
+            System.out.println("Reading from data file");
+            
+            try (FileInputStream fileIn = new FileInputStream(DATA_FILE);
+                ObjectInputStream in = new ObjectInputStream(fileIn)) {
+                
+                // Cast the deserialized object back to Deque<WeatherData>
+                recentUpdates = (Deque<WeatherData>) in.readObject();
+            } catch (IOException i) {
+                i.printStackTrace();
+            }
+        }
+
     }
 
     public AggregationServer(ServerSocket serverSocket) throws RuntimeException {
         super(serverSocket);
+        aggregatedWeatherData = new AggregatedWeatherData();
     }
 
     @Override
@@ -37,10 +107,11 @@ public class AggregationServer extends HTTPServer {
     @Override
     public String handlePUTRequest(HTTPRequest httpRequest) {
         try {
-            // Write the PUT request body to the data file
-            Files.write(new File(DATA_FILE).toPath(), httpRequest.getBody().getBytes());
+            // update AggregatedWeatherData
+            aggregatedWeatherData.addUpdate(httpRequest.getBody());
+            aggregatedWeatherData.writeToFile();
             return buildPUTResponse();
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
             return buildErrorResponse("Failed to write data");
         }
