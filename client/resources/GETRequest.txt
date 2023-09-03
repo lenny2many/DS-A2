@@ -1,4 +1,5 @@
 GET /get HTTP/1.1
 Host: httpbin.org
+Content-Length: 0
 User-Agent: SimpleGETClient
 Connection: close

@@ -16,20 +16,15 @@ public class AggregationServer extends HTTPServer {
     }
 
     @Override
-    public String buildResponse() {
-        String httpResponse = "HTTP/1.1 200 OK\r\nContent-Length:36\r\n\r\nHello, this is a simple HTTP server!";
+    public String buildGETResponse() {
+        String httpResponse = "HTTP/1.1 200 OK\r\nContent-Length:57\r\n\r\nHello, this is a simple HTTP server! GET request received";
         return httpResponse;
     }
 
-    public void determineRequestHeader(String request) {
-        String[] requestLines = request.split("\r\n");
-        String[] requestLine = requestLines[0].split(" ");
-        String requestMethod = requestLine[0];
-        String requestLocation = requestLine[1];
-        String requestProtocol = requestLine[2];
-        System.out.println("Request Method: " + requestMethod);
-        System.out.println("Request Location: " + requestLocation);
-        System.out.println("Request Protocol: " + requestProtocol);
+    @Override
+    public String buildPUTResponse() {
+        String httpResponse = "HTTP/1.1 200 OK\r\nContent-Length:57\r\n\r\nHello, this is a simple HTTP server! PUT request received";
+        return httpResponse;
     }
 
     public static void main(String[] args) {

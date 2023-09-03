@@ -1,5 +1,7 @@
 package common.http;
 
+import common.http.messages.HTTPRequest;
+
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -12,13 +14,34 @@ public abstract class HTTPServer implements AutoCloseable {
         System.out.println("Server started and listening on port " + serverSocket.getLocalPort());
     }
 
-    public abstract String buildResponse();
+    public abstract String buildGETResponse();
+    public abstract String buildPUTResponse();
 
-    public void acceptClientConnection(Socket clientSocket) {
+    public void receiveClientRequest(Socket clientSocket) {
         try (HTTPConnection conn = new HTTPConnection(clientSocket);) {
-            System.out.println("Received a connection from " + clientSocket.getInetAddress());
-            conn.readBuffer();
-            String httpResponse = this.buildResponse();
+            HTTPRequest httpRequest = new HTTPRequest(conn.readBuffer());
+
+            String httpResponse = null;
+            switch (httpRequest.getRequestMethod()) {
+                case "GET":
+                    System.out.println("GET request received");
+                    httpResponse = this.buildGETResponse();
+                    break;
+                case "POST":
+                    System.out.println("POST request received");
+                    break;
+                case "PUT":
+                    System.out.println("PUT request received");
+                    httpResponse = this.buildPUTResponse();
+                    break;
+                case "DELETE":
+                    System.out.println("DELETE request received");
+                    break;
+                default:
+                    System.out.println("Invalid request received");
+                    break;
+            }
+
             conn.sendData(httpResponse);
         } catch (Exception e) {
             e.printStackTrace();
@@ -29,7 +52,8 @@ public abstract class HTTPServer implements AutoCloseable {
     public void run() {
         while (true) {
             try (Socket clientSocket = serverSocket.accept();) {
-                this.acceptClientConnection(clientSocket);
+                System.out.println("Received a connection from " + clientSocket.getInetAddress());
+                this.receiveClientRequest(clientSocket);
             } catch (IOException e) {
                 e.printStackTrace();
             }

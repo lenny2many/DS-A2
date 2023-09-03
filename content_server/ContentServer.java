@@ -28,7 +28,7 @@ public class ContentServer extends HTTPClient {
     }
 
     public static void main(String[] args) {
-        try (ContentServer contentServer = new ContentServer(new Socket(HOST, PORT))))) {
+        try (ContentServer contentServer = new ContentServer(new Socket(HOST, PORT));) {
             String location = "content_server/resources/";
             contentServer.sendHTTPRequest(location+"PUTRequest.txt", location+"WeatherData.txt");
         } catch (IOException e) {

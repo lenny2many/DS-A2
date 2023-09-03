@@ -26,7 +26,7 @@ public class GETClient extends HTTPClient {
     }
 
     public static void main(String[] args) {
-        try (GETClient client = new GETClient(new Socket(HOST, PORT))) {
+        try (GETClient client = new GETClient(new Socket(HOST, PORT));) {
             client.sendHTTPRequest(request_location);
         } catch (IOException e) {
             e.printStackTrace();

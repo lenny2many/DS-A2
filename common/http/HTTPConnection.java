@@ -1,5 +1,7 @@
 package common.http;
 
+import common.http.messages.HTTPMessage;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -22,29 +24,29 @@ public class HTTPConnection implements AutoCloseable {
         out.flush();
     }
 
-    public String readBuffer() throws IOException {
-        StringBuilder response = new StringBuilder();
+    public HTTPMessage readBuffer() throws IOException {
+        StringBuilder message = new StringBuilder();
         String line;
         int contentLength = -1;
 
         // Read up to end of headers (start of body)
         while ((line = in.readLine()) != null && !line.isEmpty()) {
-            response.append(line).append("\r\n");
+            message.append(line).append("\r\n");
 
             if (line.startsWith("Content-Length")) {
                 contentLength = Integer.parseInt(line.split(":")[1].trim());
             }
         }
+        message.append("\r\n");
 
-        response.append("\r\n");        
-
+        // Read body
         if (contentLength > 0) {
             char[] body = new char[contentLength];
             in.read(body, 0, contentLength);
-            response.append(body);
-        }    
+            message.append(body);
+        }
 
-        return response.toString();
+        return new HTTPMessage(message.toString());
     }
 
     @Override

@@ -3,6 +3,8 @@ package common.http;
 import java.io.IOException;
 import java.net.Socket;
 
+import common.http.messages.HTTPResponse;
+
 public abstract class HTTPClient implements AutoCloseable {
     private final Socket socket;
 
@@ -14,10 +16,15 @@ public abstract class HTTPClient implements AutoCloseable {
 
     public void sendHTTPRequest(String request_location, String... payload_file) {
         try (HTTPConnection conn = new HTTPConnection(socket)) {
-            String request = buildRequest(request_location, payload_file[0]);
+            String request;
+            if (payload_file.length > 0) {
+                request = buildRequest(request_location, payload_file[0]);
+            } else {
+                request = buildRequest(request_location);
+            }
             conn.sendData(request);
-            String response = conn.readBuffer();
-            System.out.println(response);
+            HTTPResponse response = new HTTPResponse(conn.readBuffer());
+            System.out.println(response.toString());
         } catch (IOException e) {
             e.printStackTrace();
         }
