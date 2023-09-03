@@ -8,7 +8,6 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.net.ServerSocket;
-import java.nio.file.Files;
 import java.time.ZonedDateTime;
 import java.util.Deque;
 import java.util.LinkedList;
@@ -107,7 +106,7 @@ public class AggregationServer extends HTTPServer {
     @Override
     public String handlePUTRequest(HTTPRequest httpRequest) {
         try {
-            // update AggregatedWeatherData
+            // add the new data and then save to intermediate file for persistence
             aggregatedWeatherData.addUpdate(httpRequest.getBody());
             aggregatedWeatherData.writeToFile();
             return buildPUTResponse();
@@ -126,7 +125,8 @@ public class AggregationServer extends HTTPServer {
     }
 
     private String buildPUTResponse() {
-        return "HTTP/1.1 200 OK\r\nContent-Length:57\r\n\r\nHello, this is a simple HTTP server! PUT request received";
+        String httpBody = "Aggregation Server successfully received PUT request at " + ZonedDateTime.now() + "\r\n";
+        return String.format("HTTP/1.1 200 OK\r\nContent-Length: %d\r\n\r\n%s\r\n", httpBody.length(), httpBody);
     }
 
     public static void main(String[] args) {
