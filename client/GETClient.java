@@ -12,6 +12,10 @@ public class GETClient extends HTTPClient {
     private static final String HOST = "127.0.0.1";
     private static final int PORT = 4567;
 
+    public GETClient(Socket socket) throws IOException {
+        super(socket);
+    }
+
     private static final String request_location = "client/resources/GETRequest.txt";
 
     @Override
@@ -22,7 +26,7 @@ public class GETClient extends HTTPClient {
     }
 
     public static void main(String[] args) {
-        try (GETClient client = new GETClient())) {
+        try (GETClient client = new GETClient(new Socket(HOST, PORT))) {
             client.sendHTTPRequest(request_location);
         } catch (IOException e) {
             e.printStackTrace();

@@ -12,6 +12,10 @@ public class ContentServer extends HTTPClient {
     private static final String HOST = "127.0.0.1";
     private static final int PORT = 4567;
 
+    public ContentServer(Socket socket) throws IOException {
+        super(socket);
+    }
+
     @Override
     protected String buildRequest(String request_location, String... payload_file) throws IOException {
         // Build PUT request
@@ -24,9 +28,9 @@ public class ContentServer extends HTTPClient {
     }
 
     public static void main(String[] args) {
-        try {
+        try (ContentServer contentServer = new ContentServer(new Socket(HOST, PORT))))) {
             String location = "content_server/resources/";
-            new ContentServer().sendHTTPRequest(new Socket(HOST, PORT), location+"PUTRequest.txt", location+"WeatherData.txt");
+            contentServer.sendHTTPRequest(location+"PUTRequest.txt", location+"WeatherData.txt");
         } catch (IOException e) {
             e.printStackTrace();
         }
