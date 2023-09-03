@@ -57,6 +57,13 @@ public class AggregationServer extends HTTPServer {
             }
         }
 
+        public String getMostRecentUpdate() {
+            if (recentUpdates.isEmpty()) {
+                return "No data available";
+            }
+            return recentUpdates.getLast().weatherData;
+        }
+
         public void writeToFile() throws IOException {
             // Write the recentUpdates queue to the data file
             System.out.println("Writing to data file");
@@ -99,8 +106,12 @@ public class AggregationServer extends HTTPServer {
 
     @Override
     public String handleGETRequest(HTTPRequest httpRequest) {
-        String httpResponse = buildGETResponse();
-        return httpResponse;
+        try {
+            return buildGETResponse(aggregatedWeatherData.getMostRecentUpdate());
+        } catch (Exception e) {
+            e.printStackTrace();
+            return buildErrorResponse("Failed to read data");
+        }
     }
 
     @Override
@@ -120,8 +131,8 @@ public class AggregationServer extends HTTPServer {
         return "HTTP/1.1 500 Internal Server Error\r\nContent-Length:" + message.length() + "\r\n\r\n" + message;
     }
 
-    private String buildGETResponse() {
-        return "HTTP/1.1 200 OK\r\nContent-Length:57\r\n\r\nHello, this is a simple HTTP server! GET request received";
+    private String buildGETResponse(String message) {
+        return String.format("HTTP/1.1 200 OK\r\nContent-Length: %d\r\n\r\n%s\r\n", message.length(), message);
     }
 
     private String buildPUTResponse() {
