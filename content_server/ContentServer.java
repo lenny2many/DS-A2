@@ -5,28 +5,28 @@ import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
-import client.GETClient;
 import common.http.HTTPClient;
 
 
 public class ContentServer extends HTTPClient {
     private static final String HOST = "127.0.0.1";
     private static final int PORT = 4567;
-    
-    private final String request_location = "content_server/resources/PUTRequest.txt";
-    private final String payload_file = "content_server/resources/WeatherData.txt";
 
     @Override
-    protected String buildRequest(String request_location, String payload_file) throws IOException {
+    protected String buildRequest(String request_location, String... payload_file) throws IOException {
         // Build PUT request
+        System.out.println(request_location);
         String request = new String(Files.readAllBytes(Paths.get(request_location)));
-        request = request.replace("{{payload}}", new String(Files.readAllBytes(Paths.get(payload_file))));
+        String payload = new String(Files.readAllBytes(Paths.get(payload_file[0])));
+        request = request.replace("{{payload_length}}", Integer.toString(payload.length()));
+        request = request.replace("{{payload}}", payload);
         return request;
     }
 
     public static void main(String[] args) {
         try {
-            new ContentServer().run(new Socket(HOST, PORT));
+            String location = "content_server/resources/";
+            new ContentServer().sendHTTPRequest(new Socket(HOST, PORT), location+"PUTRequest.txt", location+"WeatherData.txt");
         } catch (IOException e) {
             e.printStackTrace();
         }

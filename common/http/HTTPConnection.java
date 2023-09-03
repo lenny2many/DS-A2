@@ -17,22 +17,32 @@ public class HTTPConnection implements AutoCloseable {
         this.in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
     }
 
-    public void sendRequest(String request) throws IOException {
+    public void sendData(String request) throws IOException {
         out.write(request, 0, request.length());
         out.flush();
     }
 
-    public String readResponse() throws IOException {
+    public String readBuffer() throws IOException {
         StringBuilder response = new StringBuilder();
         String line;
-        while ((line = in.readLine()) != null) {
+        int contentLength = -1;
+
+        // Read up to end of headers (start of body)
+        while ((line = in.readLine()) != null && !line.isEmpty()) {
             response.append(line).append("\r\n");
+
+            if (line.startsWith("Content-Length")) {
+                contentLength = Integer.parseInt(line.split(":")[1].trim());
+            }
         }
 
-        // Remove the last newline character
-        if (response.length() > 0) {
-            response.setLength(response.length() - 2);
-        }
+        response.append("\r\n");        
+
+        if (contentLength > 0) {
+            char[] body = new char[contentLength];
+            in.read(body, 0, contentLength);
+            response.append(body);
+        }    
 
         return response.toString();
     }
