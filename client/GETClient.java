@@ -15,15 +15,15 @@ public class GETClient extends HTTPClient {
     private static final String request_location = "client/resources/GETRequest.txt";
 
     @Override
-    protected String buildRequest(String request_location, String payload_file) throws IOException {
+    protected String buildRequest(String request_location, String... payload_file) throws IOException {
         // Build GET request
         String request = new String(Files.readAllBytes(Paths.get(request_location)));
         return request;
     }
 
     public static void main(String[] args) {
-        try {
-            new GETClient().run(new Socket(HOST, PORT));
+        try (GETClient client = new GETClient())) {
+            client.sendHTTPRequest(request_location);
         } catch (IOException e) {
             e.printStackTrace();
         }
