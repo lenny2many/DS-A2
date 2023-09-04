@@ -14,6 +14,7 @@ import java.util.LinkedList;
 
 import common.http.HTTPServer;
 import common.http.messages.HTTPRequest;
+import common.util.JSONObject;
 
 
 public class AggregationServer extends HTTPServer {
@@ -107,7 +108,8 @@ public class AggregationServer extends HTTPServer {
     @Override
     public String handleGETRequest(HTTPRequest httpRequest) {
         try {
-            return buildGETResponse(aggregatedWeatherData.getMostRecentUpdate());
+            JSONObject weatherUpdate = new JSONObject(aggregatedWeatherData.getMostRecentUpdate());
+            return buildGETResponse(weatherUpdate.toString());
         } catch (Exception e) {
             e.printStackTrace();
             return buildErrorResponse("Failed to read data");
@@ -131,8 +133,8 @@ public class AggregationServer extends HTTPServer {
         return "HTTP/1.1 500 Internal Server Error\r\nContent-Length:" + message.length() + "\r\n\r\n" + message;
     }
 
-    private String buildGETResponse(String message) {
-        return String.format("HTTP/1.1 200 OK\r\nContent-Length: %d\r\n\r\n%s\r\n", message.length(), message);
+    private String buildGETResponse(String weatherUpdate) {
+        return String.format("HTTP/1.1 200 OK\r\nContent-Length: %d\r\n\r\n%s\r\n", weatherUpdate.length(), weatherUpdate);
     }
 
     private String buildPUTResponse() {
