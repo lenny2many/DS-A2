@@ -6,7 +6,8 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 
 import common.http.HTTPClient;
-
+import common.http.messages.HTTPResponse;
+import common.util.JSONObject;
 
 public class GETClient extends HTTPClient {
     private static final String DEFAULT_HOST = "localhost";
@@ -105,7 +106,10 @@ public class GETClient extends HTTPClient {
         }
 
         try (GETClient client = new GETClient(new Socket(cli_args[1], Integer.parseInt(cli_args[2])));) {
-            client.sendHTTPRequest(request_location);
+            HTTPResponse response = client.sendHTTPRequest(request_location);
+            JSONObject weatherUpdate = new JSONObject(response.getBody());
+            // System.out.println("Response from server: " + response.toString() + "\n");
+            System.out.println(weatherUpdate.toSimpleListString());
         } catch (IOException e) {
             e.printStackTrace();
         }

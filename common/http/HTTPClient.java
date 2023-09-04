@@ -14,7 +14,7 @@ public abstract class HTTPClient implements AutoCloseable {
 
     protected abstract String buildRequest(String request_location, String... payload_file) throws IOException;
 
-    public void sendHTTPRequest(String request_location, String... payload_file) {
+    public HTTPResponse sendHTTPRequest(String request_location, String... payload_file) {
         try (HTTPConnection conn = new HTTPConnection(socket)) {
             String request;
             if (payload_file.length > 0) {
@@ -24,9 +24,10 @@ public abstract class HTTPClient implements AutoCloseable {
             }
             conn.sendData(request);
             HTTPResponse response = new HTTPResponse(conn.readBuffer());
-            System.out.println(response.toString());
+            return response;
         } catch (IOException e) {
             e.printStackTrace();
+            return null;
         }
     }
 

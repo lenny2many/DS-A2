@@ -109,7 +109,7 @@ public class AggregationServer extends HTTPServer {
     public String handleGETRequest(HTTPRequest httpRequest) {
         try {
             JSONObject weatherUpdate = new JSONObject(aggregatedWeatherData.getMostRecentUpdate());
-            return buildGETResponse(weatherUpdate.toString());
+            return buildGETResponse(weatherUpdate.toJsonString());
         } catch (Exception e) {
             e.printStackTrace();
             return buildErrorResponse("Failed to read data");

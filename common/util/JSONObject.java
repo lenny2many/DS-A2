@@ -1,20 +1,39 @@
 package common.util;
 
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.HashMap;
 
 public class JSONObject {
     private final Map<String, String> keyValMap = new HashMap<>();
 
-    public JSONObject() {}
+    public JSONObject(String inputString) {
+        if (inputString.contains("{")) {
+            parseJsonFormat(inputString);
+        } else {
+            parseSimpleListFormat(inputString);
+        }
+    }
 
-    public JSONObject(String jsonString) {
-        String[] keyValPairs = jsonString.split("\n");
+    private void parseSimpleListFormat(String simpleListString) {
+        String[] keyValPairs = simpleListString.split("\n");
         for (String keyValPair : keyValPairs) {
             String[] keyVal = keyValPair.split(":");
             keyValMap.put(keyVal[0].trim(), keyVal[1].trim());
         }
     }
+
+    private void parseJsonFormat(String jsonString) {
+        Pattern pattern = Pattern.compile("\"(.*?)\"\\s*:\\s*(\".*?\"|[-+]?[0-9]*\\.?[0-9]+)");
+        Matcher matcher = pattern.matcher(jsonString);
+        while (matcher.find()) {
+            String key = matcher.group(1);
+            String value = matcher.group(2).replaceAll("\"", "");
+            keyValMap.put(key, value);
+        }
+    }
+
 
     public void put(String key, String value) {
         keyValMap.put(key, value);
@@ -24,12 +43,12 @@ public class JSONObject {
         return keyValMap.get(key);
     }
 
-    public String toString() {
+    public String toJsonString() {
         StringBuilder sb = new StringBuilder();
         sb.append("{\n");
         for (Map.Entry<String, String> entry : keyValMap.entrySet()) {
             sb.append("   ");
-            sb.append('"'+entry.getKey()+'"');
+            sb.append('"').append(entry.getKey()).append('"');
             sb.append(": ");
             
             if (isNumeric(entry.getValue())) {
@@ -43,6 +62,14 @@ public class JSONObject {
         sb.delete(sb.length()-2, sb.length());
         sb.append("\n}");
         return sb.toString();
+    }
+
+    public String toSimpleListString() {
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<String, String> entry : keyValMap.entrySet()) {
+            sb.append(entry.getKey()).append(": ").append(entry.getValue()).append("\n");
+        }
+        return sb.toString().trim();
     }
 
     private static boolean isNumeric(String str) {
