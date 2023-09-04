@@ -18,7 +18,7 @@ import common.util.JSONObject;
 
 
 public class AggregationServer extends HTTPServer {
-    private static final int PORT = 4567;
+    private static final String DEFAULT_PORT = "4567";
 
     private static final String DATA_FILE = "aggregation_server/resources/WeatherData.txt";
     private AggregatedWeatherData aggregatedWeatherData;
@@ -142,8 +142,61 @@ public class AggregationServer extends HTTPServer {
         return String.format("HTTP/1.1 200 OK\r\nContent-Length: %d\r\n\r\n%s\r\n", httpBody.length(), httpBody);
     }
 
+    public static String[] CLI(String[] args) {
+        String port;
+
+        if (args.length == 0) {
+            System.out.println("No arguments provided\n");
+            displayHelp();
+            return null;
+        }
+
+        if (args.length == 1) {
+            if (args[0].equals("--help") || args[0].equals("-h")) {
+                displayHelp();
+                return null;
+            } else if (args[0].equals("--default") || args[0].equals("-d")) {
+                port = DEFAULT_PORT;
+            } else if (isNumeric(args[0])) {
+                port = args[0];
+            } else {
+                System.out.println("Invalid arguments specified\n");
+                displayHelp();
+                return null;
+            }
+        } else {
+            System.out.println("Invalid arguments specified\n");
+            displayHelp();
+            return null;
+        }
+
+        return new String[] { port };
+    }
+
+    private static void displayHelp() {
+        System.out.println("Usage: java AggregationServer [PORT]\n");
+        System.out.println("Options:");
+        System.out.println("  PORT                     The port number to listen on");
+        System.out.println("  --default, -d            Use the default port {" + DEFAULT_PORT + "}");
+        System.out.println("  --help, -h               Display this message\n");
+        System.out.println("Examples:");
+        System.out.println("  java AggregationServer 4567");
+        System.out.println("  java AggregationServer -d\n");
+        System.out.println("Defaults:");
+        System.out.println(String.format("  PORT: %s", DEFAULT_PORT));
+    }
+
+    private static boolean isNumeric(String str) {
+        return str.matches("-?\\d+(\\.\\d+)?");
+    }
+
     public static void main(String[] args) {
-        try (AggregationServer server = new AggregationServer(new ServerSocket(PORT))) {
+        String[] cli_args = CLI(args);
+        if (cli_args == null) {
+            return;
+        }
+
+        try (AggregationServer server = new AggregationServer(new ServerSocket(Integer.parseInt(cli_args[0])))) {
             server.run();
         } catch (Exception e) {
             e.printStackTrace();
