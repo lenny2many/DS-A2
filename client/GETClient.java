@@ -88,7 +88,7 @@ public class GETClient extends HTTPClient {
         System.out.println("  --help, -h                    Display this help message and exit\n");
         System.out.println("Examples:");
         System.out.println("  java GETClient http://example:4567");
-        System.out.println("  java GETClient example:4567");
+        System.out.println("  java GETClient example:4567\n");
         System.out.println("Defaults:");
         System.out.println(String.format("  SERVERNAME: %s", DEFAULT_HOST));
         System.out.println(String.format("  PORT: %s", DEFAULT_PORT));
@@ -99,12 +99,12 @@ public class GETClient extends HTTPClient {
     }
 
     public static void main(String[] args) {
-        String[] parts = CLI(args);
-        if (parts == null) {
+        String[] cli_args = CLI(args);
+        if (cli_args == null) {
             return;
         }
 
-        try (GETClient client = new GETClient(new Socket(parts[1], Integer.parseInt(parts[2])));) {
+        try (GETClient client = new GETClient(new Socket(cli_args[1], Integer.parseInt(cli_args[2])));) {
             client.sendHTTPRequest(request_location);
         } catch (IOException e) {
             e.printStackTrace();
