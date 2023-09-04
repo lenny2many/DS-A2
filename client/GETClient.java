@@ -107,8 +107,8 @@ public class GETClient extends HTTPClient {
 
         try (GETClient client = new GETClient(new Socket(cli_args[1], Integer.parseInt(cli_args[2])));) {
             HTTPResponse response = client.sendHTTPRequest(request_location);
+            System.out.println("Response from server: " + response.toString() + "\n");
             JSONObject weatherUpdate = new JSONObject(response.getBody());
-            // System.out.println("Response from server: " + response.toString() + "\n");
             System.out.println(weatherUpdate.toSimpleListString());
         } catch (IOException e) {
             e.printStackTrace();

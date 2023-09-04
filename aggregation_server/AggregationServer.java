@@ -19,8 +19,10 @@ import common.util.JSONObject;
 
 public class AggregationServer extends HTTPServer {
     private static final String DEFAULT_PORT = "4567";
-
     private static final String DATA_FILE = "aggregation_server/resources/WeatherData.txt";
+    private static final String INTERNAL_SERVER_ERROR = "500 Internal server error";
+    private static final String METHOD_NOT_IMPLEMENTED = "400 Method not implemented";
+
     private AggregatedWeatherData aggregatedWeatherData;
     
 
@@ -112,7 +114,7 @@ public class AggregationServer extends HTTPServer {
             return buildGETResponse(weatherUpdate.toJsonString());
         } catch (Exception e) {
             e.printStackTrace();
-            return buildErrorResponse("Failed to read data");
+            return buildErrorResponse(INTERNAL_SERVER_ERROR, "Failed to read data");
         }
     }
 
@@ -125,12 +127,22 @@ public class AggregationServer extends HTTPServer {
             return buildPUTResponse();
         } catch (Exception e) {
             e.printStackTrace();
-            return buildErrorResponse("Failed to write data");
+            return buildErrorResponse(INTERNAL_SERVER_ERROR, "Failed to write data");
         }
     }
 
-    private String buildErrorResponse(String message) {
-        return "HTTP/1.1 500 Internal Server Error\r\nContent-Length:" + message.length() + "\r\n\r\n" + message;
+    @Override
+    public String handlePOSTRequest(HTTPRequest httpRequest) {
+        return buildErrorResponse(METHOD_NOT_IMPLEMENTED, "POST not supported");
+    }
+
+    @Override
+    public String handleDELETERequest(HTTPRequest httpRequest) {
+        return buildErrorResponse(METHOD_NOT_IMPLEMENTED, "DELETE not supported");
+    }
+
+    private String buildErrorResponse(String statusCode, String message) {
+        return "HTTP/1.1 " + statusCode + "\r\nContent-Length:" + message.length() + "\r\n\r\n" + message;
     }
 
     private String buildGETResponse(String weatherUpdate) {
