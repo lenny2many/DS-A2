@@ -1,24 +1,18 @@
 package aggregation_server;
 
-import java.io.BufferedReader;
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.net.ServerSocket;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.ZonedDateTime;
 import java.util.Deque;
 import java.util.LinkedList;
-import java.util.stream.Collectors;
 
 import common.http.HTTPServer;
 import common.http.messages.HTTPRequest;
@@ -30,6 +24,7 @@ public class AggregationServer extends HTTPServer {
     private static final String DATA_FILE = "aggregation_server/resources/WeatherData";
     private static final String INTERNAL_SERVER_ERROR = "500 Internal server error";
     private static final String METHOD_NOT_IMPLEMENTED = "400 Method not implemented";
+    private static final String EMPTY_REQUEST_BODY = "204 Empty Request Body";
     private static final String HTTP_CREATED = "201 HTTP_CREATED";
     private static final String OK = "200 OK";
 
@@ -81,7 +76,7 @@ public class AggregationServer extends HTTPServer {
         private void saveUpdatesToFile() throws IOException {
             try (FileOutputStream fileOut = new FileOutputStream(DATA_FILE);
                 ObjectOutputStream out = new ObjectOutputStream(fileOut)) {
-                    out.writeObject(recentUpdates);
+                out.writeObject(recentUpdates);
             } catch (IOException i) {
                 System.out.println("Error writing data to file.");
                 throw i;
@@ -123,9 +118,30 @@ public class AggregationServer extends HTTPServer {
     public String handlePUTRequest(HTTPRequest httpRequest) {
         try {
             aggregatedWeatherData.addUpdate(httpRequest.getBody());
-    
+
+            // checks on body of request for content validation
+            if (httpRequest.getBody().isEmpty() || httpRequest.getBody().equals("null")) {
+                System.out.println("Empty request body");
+                return buildPUTResponse(EMPTY_REQUEST_BODY);
+            } 
+            
+            try {
+                JSONObject weatherUpdate = new JSONObject(httpRequest.getBody());
+                System.out.println("Body of request was parsed successfully");
+                //  check if the json object is empty
+                if (httpRequest.getBody().equals("{}")) {
+                    System.out.println("Empty JSON object");
+                    return buildPUTResponse(EMPTY_REQUEST_BODY);
+                } else if (weatherUpdate.get("id") == null || weatherUpdate.get("id").isEmpty()) {
+                        System.out.println("Invalid location ID");
+                    return buildErrorResponse(INTERNAL_SERVER_ERROR, "Invalid location");
+                }
+            } catch (Exception e) {
+                System.out.println("Failed to parse JSON");
+                return buildErrorResponse(INTERNAL_SERVER_ERROR, "Failed to parse JSON");
+            }
+
             Path dataFilePath = Paths.get(DATA_FILE);
-    
             // If file doesn't exist, create and save to it
             if (!Files.exists(dataFilePath)) {
                 System.out.println("File does not exist, creating new file");
@@ -140,20 +156,6 @@ public class AggregationServer extends HTTPServer {
         }
     }
 
-    @Override
-    public String handlePOSTRequest(HTTPRequest httpRequest) {
-        return buildErrorResponse(METHOD_NOT_IMPLEMENTED, "POST not supported");
-    }
-
-    @Override
-    public String handleDELETERequest(HTTPRequest httpRequest) {
-        return buildErrorResponse(METHOD_NOT_IMPLEMENTED, "DELETE not supported");
-    }
-
-    private String buildErrorResponse(String statusCode, String message) {
-        return "HTTP/1.1 " + statusCode + "\r\nContent-Length:" + message.length() + "\r\n\r\n" + message;
-    }
-
     private String buildGETResponse(String weatherUpdate) {
         return String.format("HTTP/1.1 200 OK\r\nContent-Length: %d\r\n\r\n%s\r\n", weatherUpdate.length(), weatherUpdate);
     }
@@ -162,6 +164,20 @@ public class AggregationServer extends HTTPServer {
         String httpBody = "Aggregation Server successfully received PUT request at " + ZonedDateTime.now() + "\r\n";
         return String.format("HTTP/1.1 " + statusCode + "\r\nContent-Length: %d\r\n\r\n%s\r\n", httpBody.length(), httpBody);
     }
+
+    private String buildErrorResponse(String statusCode, String message) {
+        return "HTTP/1.1 " + statusCode + "\r\nContent-Length:" + message.length() + "\r\n\r\n" + message;
+    }
+
+    @Override
+    public String handlePOSTRequest(HTTPRequest httpRequest) {
+        return buildErrorResponse(METHOD_NOT_IMPLEMENTED, "POST not supported");
+    }
+
+    @Override
+    public String handleDELETERequest(HTTPRequest httpRequest) {
+        return buildErrorResponse(METHOD_NOT_IMPLEMENTED, "DELETE not supported");
+    } 
 
     public static String[] CLI(String[] args) {
         String port;

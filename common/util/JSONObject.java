@@ -8,29 +8,43 @@ import java.util.HashMap;
 public class JSONObject {
     private final Map<String, String> keyValMap = new HashMap<>();
 
-    public JSONObject(String inputString) {
-        if (inputString.contains("{")) {
-            parseJsonFormat(inputString);
-        } else {
-            parseSimpleListFormat(inputString);
+    public JSONObject(String inputString) throws Exception {
+        try {
+            if (inputString.contains("{")) {
+                parseJsonFormat(inputString);
+            } else {
+                parseSimpleListFormat(inputString);
+            }
+        } catch (Exception e) {
+            throw e;
         }
+        
     }
 
-    private void parseSimpleListFormat(String simpleListString) {
-        String[] keyValPairs = simpleListString.split("\n");
-        for (String keyValPair : keyValPairs) {
-            String[] keyVal = keyValPair.split(":");
-            keyValMap.put(keyVal[0].trim(), keyVal[1].trim());
+    private void parseSimpleListFormat(String simpleListString) throws Exception {
+        try {
+            String[] keyValPairs = simpleListString.split("\n");
+            for (String keyValPair : keyValPairs) {
+                String[] keyVal = keyValPair.split(":");
+                keyValMap.put(keyVal[0].trim(), keyVal[1].trim());
+            }
+        } catch (Exception e) {
+            throw e;
         }
+        
     }
 
     private void parseJsonFormat(String jsonString) {
-        Pattern pattern = Pattern.compile("\"(.*?)\"\\s*:\\s*(\".*?\"|[-+]?[0-9]*\\.?[0-9]+)");
-        Matcher matcher = pattern.matcher(jsonString);
-        while (matcher.find()) {
-            String key = matcher.group(1);
-            String value = matcher.group(2).replaceAll("\"", "");
-            keyValMap.put(key, value);
+        try {
+            Pattern pattern = Pattern.compile("\"(.*?)\"\\s*:\\s*(\".*?\"|[-+]?[0-9]*\\.?[0-9]+)");
+            Matcher matcher = pattern.matcher(jsonString);
+            while (matcher.find()) {
+                String key = matcher.group(1);
+                String value = matcher.group(2).replaceAll("\"", "");
+                keyValMap.put(key, value);
+            }
+        } catch (Exception e) {
+            throw e;
         }
     }
 
