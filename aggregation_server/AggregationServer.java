@@ -1,16 +1,24 @@
 package aggregation_server;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.net.ServerSocket;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.ZonedDateTime;
 import java.util.Deque;
 import java.util.LinkedList;
+import java.util.stream.Collectors;
 
 import common.http.HTTPServer;
 import common.http.messages.HTTPRequest;
@@ -19,9 +27,11 @@ import common.util.JSONObject;
 
 public class AggregationServer extends HTTPServer {
     private static final String DEFAULT_PORT = "4567";
-    private static final String DATA_FILE = "aggregation_server/resources/WeatherData.txt";
+    private static final String DATA_FILE = "aggregation_server/resources/WeatherData";
     private static final String INTERNAL_SERVER_ERROR = "500 Internal server error";
     private static final String METHOD_NOT_IMPLEMENTED = "400 Method not implemented";
+    private static final String HTTP_CREATED = "201 HTTP_CREATED";
+    private static final String OK = "200 OK";
 
     private AggregatedWeatherData aggregatedWeatherData;
     
@@ -44,6 +54,7 @@ public class AggregationServer extends HTTPServer {
             try {
                 readFromFile();
             } catch (Exception e) {
+                System.out.println("Failed to read from file");
                 e.printStackTrace();
             }
 
@@ -66,28 +77,19 @@ public class AggregationServer extends HTTPServer {
             }
             return recentUpdates.getLast().weatherData;
         }
-
-        public void writeToFile() throws IOException {
-            // Write the recentUpdates queue to the data file
-            System.out.println("Writing to data file");
-
+        
+        private void saveUpdatesToFile() throws IOException {
             try (FileOutputStream fileOut = new FileOutputStream(DATA_FILE);
                 ObjectOutputStream out = new ObjectOutputStream(fileOut)) {
-                out.writeObject(recentUpdates);
+                    out.writeObject(recentUpdates);
             } catch (IOException i) {
-                i.printStackTrace();
+                System.out.println("Error writing data to file.");
+                throw i;
             }
         }
 
         @SuppressWarnings("unchecked")
         public void readFromFile() throws IOException, ClassNotFoundException {
-            // Check if file exists
-            File dataFile = new File(DATA_FILE);
-            if (!dataFile.exists()) {
-                System.out.println("Data file not found.");
-                return;
-            }
-            
             System.out.println("Reading from data file");
             
             try (FileInputStream fileIn = new FileInputStream(DATA_FILE);
@@ -99,7 +101,6 @@ public class AggregationServer extends HTTPServer {
                 i.printStackTrace();
             }
         }
-
     }
 
     public AggregationServer(ServerSocket serverSocket) throws RuntimeException {
@@ -121,10 +122,18 @@ public class AggregationServer extends HTTPServer {
     @Override
     public String handlePUTRequest(HTTPRequest httpRequest) {
         try {
-            // add the new data and then save to intermediate file for persistence
             aggregatedWeatherData.addUpdate(httpRequest.getBody());
-            aggregatedWeatherData.writeToFile();
-            return buildPUTResponse();
+    
+            Path dataFilePath = Paths.get(DATA_FILE);
+    
+            // If file doesn't exist, create and save to it
+            if (!Files.exists(dataFilePath)) {
+                System.out.println("File does not exist, creating new file");
+                aggregatedWeatherData.saveUpdatesToFile();
+                return buildPUTResponse(HTTP_CREATED);
+            }
+    
+            return buildPUTResponse(OK);
         } catch (Exception e) {
             e.printStackTrace();
             return buildErrorResponse(INTERNAL_SERVER_ERROR, "Failed to write data");
@@ -149,9 +158,9 @@ public class AggregationServer extends HTTPServer {
         return String.format("HTTP/1.1 200 OK\r\nContent-Length: %d\r\n\r\n%s\r\n", weatherUpdate.length(), weatherUpdate);
     }
 
-    private String buildPUTResponse() {
+    private String buildPUTResponse(String statusCode) {
         String httpBody = "Aggregation Server successfully received PUT request at " + ZonedDateTime.now() + "\r\n";
-        return String.format("HTTP/1.1 200 OK\r\nContent-Length: %d\r\n\r\n%s\r\n", httpBody.length(), httpBody);
+        return String.format("HTTP/1.1 " + statusCode + "\r\nContent-Length: %d\r\n\r\n%s\r\n", httpBody.length(), httpBody);
     }
 
     public static String[] CLI(String[] args) {

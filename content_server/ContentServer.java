@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 import java.io.InputStream;
 
 import common.http.HTTPClient;
+import common.http.messages.HTTPResponse;
 
 
 public class ContentServer extends HTTPClient {
@@ -145,7 +146,8 @@ public class ContentServer extends HTTPClient {
         }
 
         try (ContentServer contentServer = new ContentServer(new Socket(cli_args[1], Integer.parseInt(cli_args[2])));) {
-            contentServer.sendHTTPRequest("resources/PUTRequest.txt", cli_args[3]);
+            HTTPResponse response = contentServer.sendHTTPRequest("resources/PUTRequest.txt", cli_args[3]);
+            System.out.println("Response from server: " + response.toString() + "\n");
         } catch (IOException e) {
             e.printStackTrace();
         }
