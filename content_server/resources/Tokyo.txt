@@ -1,0 +1,17 @@
+id:IDS80903
+name:Tokyo (Chiyoda)
+state: Tokyo
+time_zone:JST
+lat:35.6
+lon:139.7
+local_date_time:27/08:00pm
+local_date_time_full:20230715200000
+air_temp:25.4
+apparent_t:27.1
+cloud:Clear
+dewpt:18.0
+press:1015.7
+rel_hum:68
+wind_dir:SE
+wind_spd_kmh:7
+wind_spd_kt:4

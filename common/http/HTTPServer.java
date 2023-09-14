@@ -26,12 +26,12 @@ public abstract class HTTPServer implements AutoCloseable {
             String httpResponse = null;
             switch (httpRequest.getRequestMethod()) {
                 case "GET":
-                    System.out.println("GET request received");
+                    System.out.println("GET request received: " + httpRequest.getRequestLine());
                     httpResponse = this.handleGETRequest(httpRequest);
                     
                     break;
                 case "PUT":
-                    System.out.println("PUT request received");
+                    System.out.println("PUT request received: " + httpRequest.getRequestLine());
                     httpResponse = this.handlePUTRequest(httpRequest);
                     break;
                 case "POST":

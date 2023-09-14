@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.stream.Collectors;
 import java.io.InputStream;
+import java.util.UUID;
 
 import common.http.HTTPClient;
 import common.http.messages.HTTPResponse;
@@ -19,6 +20,8 @@ public class ContentServer extends HTTPClient {
     private static final String DEFAULT_HOST = "localhost";
     private static final String DEFAULT_PORT = "4567";
     private static final String DEFAULT_FILE = "resources/WeatherData.txt";
+
+    private UUID uuid = UUID.randomUUID();
 
     public ContentServer(Socket socket) throws IOException {
         super(socket);
@@ -40,6 +43,8 @@ public class ContentServer extends HTTPClient {
             payload = reader.lines().collect(Collectors.joining("\n"));
         }
         
+        // Replace placeholders in request template
+        request = request.replace("{{UUID}}", uuid.toString());
         request = request.replace("{{payload_length}}", Integer.toString(payload.length()));
         request = request.replace("{{payload}}", payload);
         return request;

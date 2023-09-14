@@ -15,4 +15,15 @@ public class HTTPRequest extends HTTPMessage {
         String[] requestLine = lines[0].split(" ");
         return requestLine[0];
     }
+
+    public String getRequestLine() {
+        String[] lines = getHeader().split("\r\n");
+        return lines[0];
+    }
+
+    public String getRequestURI() {
+        String[] lines = getHeader().split("\r\n");
+        String[] requestLine = lines[0].split(" ");
+        return requestLine[1];
+    }
 }
