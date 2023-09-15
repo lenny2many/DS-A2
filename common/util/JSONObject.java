@@ -3,9 +3,10 @@ package common.util;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.io.Serializable;
 import java.util.HashMap;
 
-public class JSONObject {
+public class JSONObject implements Serializable {
     private final Map<String, String> keyValMap = new HashMap<>();
 
     public JSONObject(String inputString) throws Exception {

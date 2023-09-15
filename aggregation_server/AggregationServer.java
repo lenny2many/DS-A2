@@ -1,5 +1,6 @@
 package aggregation_server;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -11,8 +12,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.ZonedDateTime;
+import java.util.Collections;
 import java.util.Deque;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 import common.http.HTTPServer;
 import common.http.messages.HTTPRequest;
@@ -20,82 +27,182 @@ import common.util.JSONObject;
 
 
 public class AggregationServer extends HTTPServer {
+    // AGGREGATION SERVER DEFAULTS
     private static final String DEFAULT_PORT = "4567";
-    private static final String DATA_FILE = "aggregation_server/resources/WeatherData";
+    private static final String LATEST_UPDATES_FILE = "LATEST_UPDATES";
+    private static final String BASE_PATH = "aggregation_server/resources/data/";
+    // STATUS CODES
     private static final String INTERNAL_SERVER_ERROR = "500 Internal server error";
     private static final String METHOD_NOT_IMPLEMENTED = "400 Method not implemented";
     private static final String EMPTY_REQUEST_BODY = "204 Empty Request Body";
     private static final String HTTP_CREATED = "201 HTTP_CREATED";
     private static final String OK = "200 OK";
+    // PUT BODY RESPONSES
+    private static final String PUT_RESPONSE_BODY = "Aggregation Server successfully received PUT request at ";
+    // HTTP REQUEST DEFAULTS
+    private static final String URI_PREFIX = "/data/CS_";
 
     private AggregatedWeatherData aggregatedWeatherData;
     
 
     private static class AggregatedWeatherData implements Serializable {
         private static final int MAX_UPDATES = 20;
-        private Deque<WeatherData> recentUpdates = new LinkedList<>();
+        private Map<UUID, Deque<WeatherData>> aggregatedWeatherData;
+        private Map<String, WeatherData> latestUpdates;
+        private Boolean FileCreated = false;
          
         private static class WeatherData implements Serializable {
-            String weatherData;
+            JSONObject weatherData;
             ZonedDateTime lastUpdated;
 
-            public WeatherData(String weatherData, ZonedDateTime lastUpdated) {
+            public WeatherData(JSONObject weatherData, ZonedDateTime lastUpdated) {
                 this.lastUpdated = lastUpdated;
                 this.weatherData = weatherData;
+            }
+            
+            private String getStationID() {
+                return weatherData.get("id");
+            }
+
+            private String getWeatherDataString() {
+                return weatherData.toSimpleListString();
             }
         }
 
         public AggregatedWeatherData() {
+            aggregatedWeatherData = new HashMap<>();
+            latestUpdates = new HashMap<>();
+
             try {
-                readFromFile();
+                readDataFromFile();
             } catch (Exception e) {
-                System.out.println("Failed to read from file");
                 e.printStackTrace();
             }
-
-            if (recentUpdates == null) {
-                recentUpdates = new LinkedList<>();
-            }
         }
 
-        public void addUpdate(String newData) {
-            recentUpdates.addLast(new WeatherData(newData, ZonedDateTime.now()));
-    
-            if (recentUpdates.size() > MAX_UPDATES) {
-                recentUpdates.removeFirst();
+        public void addUpdate(UUID contentServerUUID, JSONObject weatherUpdate) {
+            // Convert JSONObject to WeatherData object
+            WeatherData latestUpdate = new WeatherData(weatherUpdate, ZonedDateTime.now());
+
+            System.out.println("Adding update for station ID: " + latestUpdate.getStationID());
+
+            // Replace the most recent running update for the station ID
+            latestUpdates.put(latestUpdate.getStationID(), latestUpdate);
+
+            // Replace the most recent update
+            latestUpdates.put("latestUpdate", latestUpdate);
+
+            // Retrieve the associated queue with the UUID or create a new one
+            Deque<WeatherData> updatesQueue = aggregatedWeatherData.getOrDefault(contentServerUUID, new LinkedList<>());
+
+            // Add the new update to the end of the queue
+            updatesQueue.addLast(latestUpdate);
+
+            // Utilise cyclic buffer to rotate the weather updates maintaining order
+            if (updatesQueue.size() > MAX_UPDATES) {
+                updatesQueue.removeFirst();
             }
+
+            // Put the queue back in the map (this is necessary if a new queue was created)
+            aggregatedWeatherData.put(contentServerUUID, updatesQueue);
         }
 
-        public String getMostRecentUpdate() {
-            if (recentUpdates.isEmpty()) {
+        public String getMostRecentUpdate(String... stationID) {
+            if (latestUpdates.isEmpty()) {
                 return "No data available";
             }
-            return recentUpdates.getLast().weatherData;
+
+            if (stationID.length == 0) {
+                return latestUpdates.get("latestUpdate").getWeatherDataString();
+            }
+            return latestUpdates.get(stationID[0]).getWeatherDataString();
         }
         
-        private void saveUpdatesToFile() throws IOException {
-            try (FileOutputStream fileOut = new FileOutputStream(DATA_FILE);
+        private void writeDataToFile(UUID contentServerUUID) throws IOException {
+            String filePath = BASE_PATH + "CS_" + contentServerUUID.toString();
+            File file = new File(filePath);
+            System.out.println("Writing data to file: " + filePath);
+            file.getParentFile().mkdirs();
+            FileCreated = !file.exists();
+
+            // Store data in separate files for each Content Server
+            try (FileOutputStream fileOut = new FileOutputStream(filePath);
                 ObjectOutputStream out = new ObjectOutputStream(fileOut)) {
-                out.writeObject(recentUpdates);
+                out.writeObject(aggregatedWeatherData);
+            } catch (IOException i) {
+                System.out.println("Error writing data to file.");
+                throw i;
+            }
+
+            // Store the most recent updates in a separate file
+            try (FileOutputStream fileOut = new FileOutputStream(BASE_PATH + LATEST_UPDATES_FILE);
+                ObjectOutputStream out = new ObjectOutputStream(fileOut)) {
+                out.writeObject(latestUpdates);
             } catch (IOException i) {
                 System.out.println("Error writing data to file.");
                 throw i;
             }
         }
 
-        @SuppressWarnings("unchecked")
-        public void readFromFile() throws IOException, ClassNotFoundException {
-            System.out.println("Reading from data file");
-            
-            try (FileInputStream fileIn = new FileInputStream(DATA_FILE);
-                ObjectInputStream in = new ObjectInputStream(fileIn)) {
-                
-                // Cast the deserialized object back to Deque<WeatherData>
-                recentUpdates = (Deque<WeatherData>) in.readObject();
-            } catch (IOException i) {
-                i.printStackTrace();
+        private void readDataFromFile() throws IOException, ClassNotFoundException {
+            // For each UUID, read its corresponding data file
+            for (UUID contentServerUUID : getAllContentServerUUIDs()) {
+                String contentServerFilePath = BASE_PATH + contentServerUUID.toString();
+                try (FileInputStream fileIn = new FileInputStream(contentServerFilePath);
+                     ObjectInputStream in = new ObjectInputStream(fileIn)) {
+                    Deque<WeatherData> updatesForServer = (Deque<WeatherData>) in.readObject();
+                    aggregatedWeatherData.put(contentServerUUID, updatesForServer);
+                } catch (IOException | ClassNotFoundException ex) {
+                    System.out.println("Error reading data for Content Server with UUID: " + contentServerUUID);
+                    ex.printStackTrace();
+                }
+            }
+        
+            // Read the latest updates from its file
+            File latestUpdatesFile = new File(BASE_PATH + LATEST_UPDATES_FILE);
+            if (latestUpdatesFile.exists()) {
+                try (FileInputStream fileIn = new FileInputStream(latestUpdatesFile);
+                     ObjectInputStream in = new ObjectInputStream(fileIn)) {
+                    Map<String, WeatherData> readLatestUpdates = (Map<String, WeatherData>) in.readObject();
+                    latestUpdates.putAll(readLatestUpdates);
+                } catch (IOException | ClassNotFoundException ex) {
+                    System.out.println("Error reading latest updates.");
+                    ex.printStackTrace();
+                }
             }
         }
+        
+
+        private Set<UUID> getAllContentServerUUIDs() {
+            // Assuming files are named as URI_PREFIX + UUID, extract UUIDs from filenames
+            File directory = new File(BASE_PATH);
+            if (!directory.exists() || !directory.isDirectory()) {
+                System.out.println("Directory " + BASE_PATH + " does not exist or is not a directory.");
+                return Collections.emptySet();
+            }
+
+            File[] files = directory.listFiles();
+            if (files == null) {
+                System.out.println("Error accessing the directory or it's empty.");
+                return Collections.emptySet();
+            }
+
+            Set<UUID> uuids = new HashSet<>();
+            for (File file : files) {
+                if (file.isFile() && file.getName().startsWith(URI_PREFIX)) {
+                    String name = file.getName();
+                    String uuidStr = name.substring(URI_PREFIX.length());
+                    try {
+                        UUID uuid = UUID.fromString(uuidStr);
+                        uuids.add(uuid);
+                    } catch (IllegalArgumentException e) {
+                        System.out.println("Invalid UUID in filename: " + name);
+                    }
+                }
+            }
+            return uuids;
+        }
+
     }
 
     public AggregationServer(ServerSocket serverSocket) throws RuntimeException {
@@ -107,77 +214,99 @@ public class AggregationServer extends HTTPServer {
     public String handleGETRequest(HTTPRequest httpRequest) {
         try {
             JSONObject weatherUpdate = new JSONObject(aggregatedWeatherData.getMostRecentUpdate());
-            return buildGETResponse(weatherUpdate.toJsonString());
+            return buildResponse(OK, weatherUpdate.toJsonString());
         } catch (Exception e) {
             e.printStackTrace();
-            return buildErrorResponse(INTERNAL_SERVER_ERROR, "Failed to read data");
+            return buildResponse(INTERNAL_SERVER_ERROR, "Failed to retrieve data");
         }
     }
 
     @Override
     public String handlePUTRequest(HTTPRequest httpRequest) {
         try {
-            aggregatedWeatherData.addUpdate(httpRequest.getBody());
+            // Extract UUID from request URI
+            UUID contentServerUUID = extractUUID(httpRequest);
 
-            // checks on body of request for content validation
-            if (httpRequest.getBody().isEmpty() || httpRequest.getBody().equals("null")) {
-                System.out.println("Empty request body");
-                return buildPUTResponse(EMPTY_REQUEST_BODY);
-            } 
-            
-            try {
-                JSONObject weatherUpdate = new JSONObject(httpRequest.getBody());
-                System.out.println("Body of request was parsed successfully");
-                //  check if the json object is empty
-                if (httpRequest.getBody().equals("{}")) {
-                    System.out.println("Empty JSON object");
-                    return buildPUTResponse(EMPTY_REQUEST_BODY);
-                } else if (weatherUpdate.get("id") == null || weatherUpdate.get("id").isEmpty()) {
-                        System.out.println("Invalid location ID");
-                    return buildErrorResponse(INTERNAL_SERVER_ERROR, "Invalid location");
-                }
-            } catch (Exception e) {
-                System.out.println("Failed to parse JSON");
-                return buildErrorResponse(INTERNAL_SERVER_ERROR, "Failed to parse JSON");
+            // Extract weather data from the request body
+            JSONObject weatherUpdate = extractWeatherData(httpRequest);
+
+            // Add the weather update to the Aggregation Servers running list of updates for the Content Server
+            aggregatedWeatherData.addUpdate(contentServerUUID, weatherUpdate);
+
+            // Save the updates to file
+            aggregatedWeatherData.writeDataToFile(contentServerUUID);
+
+            // Check FileCreated flag.
+            // If new file was created, respond with 201 HTTP_CREATED and reset flag
+            if (aggregatedWeatherData.FileCreated == true) {
+                aggregatedWeatherData.FileCreated = false;
+                return buildResponse(HTTP_CREATED, PUT_RESPONSE_BODY + ZonedDateTime.now());
             }
 
-            Path dataFilePath = Paths.get(DATA_FILE);
-            // If file doesn't exist, create and save to it
-            if (!Files.exists(dataFilePath)) {
-                System.out.println("File does not exist, creating new file");
-                aggregatedWeatherData.saveUpdatesToFile();
-                return buildPUTResponse(HTTP_CREATED);
-            }
-    
-            return buildPUTResponse(OK);
+            // Else return 200 OK
+            return buildResponse(OK, PUT_RESPONSE_BODY + ZonedDateTime.now());
         } catch (Exception e) {
             e.printStackTrace();
-            return buildErrorResponse(INTERNAL_SERVER_ERROR, "Failed to write data");
+            return buildResponse(INTERNAL_SERVER_ERROR, "Failed to save data");
         }
     }
 
-    private String buildGETResponse(String weatherUpdate) {
-        return String.format("HTTP/1.1 200 OK\r\nContent-Length: %d\r\n\r\n%s\r\n", weatherUpdate.length(), weatherUpdate);
+    private String buildResponse(String statusCode, String responseBody) {
+        return String.format("HTTP/1.1 %s\r\nContent-Length: %d\r\n\r\n%s\r\n", statusCode, responseBody.length(), responseBody);
     }
 
-    private String buildPUTResponse(String statusCode) {
-        String httpBody = "Aggregation Server successfully received PUT request at " + ZonedDateTime.now() + "\r\n";
-        return String.format("HTTP/1.1 " + statusCode + "\r\nContent-Length: %d\r\n\r\n%s\r\n", httpBody.length(), httpBody);
+    private UUID extractUUID(HTTPRequest httpRequest) {
+        String requestURI = httpRequest.getRequestURI();
+        validateRequestURI(requestURI);
+        return validateAndReturnUUID(requestURI.substring(URI_PREFIX.length()));
     }
 
-    private String buildErrorResponse(String statusCode, String message) {
-        return "HTTP/1.1 " + statusCode + "\r\nContent-Length:" + message.length() + "\r\n\r\n" + message;
+    private void validateRequestURI(String requestURI) {
+        // Check if the URI starts with the expected prefix
+        if (!requestURI.startsWith(URI_PREFIX)) {
+            throw new IllegalArgumentException("Request URI does not start with the expected prefix: " + URI_PREFIX);
+        }
     }
+    
+    private UUID validateAndReturnUUID(String uuid) {
+        try {
+            return UUID.fromString(uuid);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid UUID: " + uuid);
+        }
+    }
+
+    private JSONObject extractWeatherData(HTTPRequest httpRequest) {
+        String body = httpRequest.getBody();
+        JSONObject weatherUpdate;
+        try {
+            weatherUpdate = new JSONObject(body);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Failed to parse JSON from request body");
+        }
+        verifyWeatherData(weatherUpdate);
+        return weatherUpdate;
+    }
+    
+    private void verifyWeatherData(JSONObject weatherUpdate) {    
+        if (weatherUpdate.toString().equals("{}")) {
+            throw new IllegalArgumentException("Empty JSON object");
+        }
+    
+        if (weatherUpdate.get("id") == null || weatherUpdate.get("id").isEmpty()) {
+            throw new IllegalArgumentException("Invalid location ID");
+        }
+    }    
 
     @Override
     public String handlePOSTRequest(HTTPRequest httpRequest) {
-        return buildErrorResponse(METHOD_NOT_IMPLEMENTED, "POST not supported");
+        return buildResponse(METHOD_NOT_IMPLEMENTED, "POST not supported");
     }
 
     @Override
     public String handleDELETERequest(HTTPRequest httpRequest) {
-        return buildErrorResponse(METHOD_NOT_IMPLEMENTED, "DELETE not supported");
-    } 
+        return buildResponse(METHOD_NOT_IMPLEMENTED, "DELETE not supported");
+    }
 
     public static String[] CLI(String[] args) {
         String port;
