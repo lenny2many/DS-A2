@@ -9,6 +9,8 @@ import java.util.HashMap;
 public class JSONObject implements Serializable {
     private final Map<String, String> keyValMap = new HashMap<>();
 
+    public JSONObject() {}
+
     public JSONObject(String inputString) throws Exception {
         try {
             if (inputString.contains("{")) {
@@ -66,7 +68,7 @@ public class JSONObject implements Serializable {
             sb.append('"').append(entry.getKey()).append('"');
             sb.append(": ");
             
-            if (isNumeric(entry.getValue())) {
+            if (Math.isNumeric(entry.getValue())) {
                 sb.append(entry.getValue());
             } else {
                 sb.append('"').append(entry.getValue()).append('"');
@@ -85,9 +87,5 @@ public class JSONObject implements Serializable {
             sb.append(entry.getKey()).append(": ").append(entry.getValue()).append("\n");
         }
         return sb.toString().trim();
-    }
-
-    private static boolean isNumeric(String str) {
-        return str.matches("-?\\d+(\\.\\d+)?");
     }
 }

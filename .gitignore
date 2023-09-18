@@ -1,2 +1,2 @@
 *.class
-aggregation_server/resources/data/*
+AS/src/main/resources/data/*

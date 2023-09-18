@@ -1,4 +1,4 @@
-package content_server;
+package CS.test.content_server;
 
 import static org.mockito.Mockito.*;
 import static org.junit.Assert.*;

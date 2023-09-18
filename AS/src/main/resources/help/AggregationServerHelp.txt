@@ -1,0 +1,13 @@
+Usage: java AggregationServer [PORT]
+
+Options:
+    PORT                     The port number to listen on
+    --default, -d            Use the default port {4567}
+    --help, -h               Display this message
+
+Examples:
+    java AggregationServer 4567
+    java AggregationServer -d
+
+Defaults:
+    PORT: 4567

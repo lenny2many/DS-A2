@@ -1,4 +1,4 @@
-package common.util;
+package au.edu.adelaide.util;
 
 public class LamportClock {
     

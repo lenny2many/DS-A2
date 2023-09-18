@@ -1,0 +1,16 @@
+Usage: java [DIRECTORY].ContentServer [OPTIONS]
+
+Options:
+    PORT                     The port number to listen on
+    http://[SERVERNAME]:[PORT]    Connect to the specified server and port
+    --default, -d                 Connect to the default server and port (localhost:4567) & use default file (resources/WeatherData.txt)
+    --help, -h                    Display this help message and exit
+
+Examples:
+    java ContentServer http://example:4567 resources/WeatherData.txt
+    java ContentServer example:4567 resources/WeatherData.txt
+
+Defaults:
+    SERVERNAME: %s", DEFAULT_HOST
+    PORT: 4567
+    FILE: src/main/resources/WeatherData.txt

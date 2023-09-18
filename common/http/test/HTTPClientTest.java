@@ -1,4 +1,4 @@
-package common.http.test;
+package au.edu.adelaide.http.test;
 
 import common.http.HTTPClient;
 import common.http.HTTPConnection;
