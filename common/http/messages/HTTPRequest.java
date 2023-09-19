@@ -1,29 +1,25 @@
 package common.http.messages;
 
+import java.util.Map;
+import java.util.HashMap;
+
 public class HTTPRequest extends HTTPMessage {
+    private Map<String, String> requestLine = new HashMap<>();
 
-    public HTTPRequest(String message) {
-        super(message);
-    }
-
-    public HTTPRequest(HTTPMessage httpMessage) {
-        super(httpMessage.toString());
+    public HTTPRequest(HTTPMessage httpMessage, String requestMethod, String requestURI) {
+        this.requestLine.put("requestMethod", requestMethod);
+        this.requestLine.put("requestURI", requestURI);
     }
 
     public String getRequestMethod() {
-        String[] lines = getHeader().split("\r\n");
-        String[] requestLine = lines[0].split(" ");
-        return requestLine[0];
-    }
-
-    public String getRequestLine() {
-        String[] lines = getHeader().split("\r\n");
-        return lines[0];
+        return requestLine.get("requestMethod");
     }
 
     public String getRequestURI() {
-        String[] lines = getHeader().split("\r\n");
-        String[] requestLine = lines[0].split(" ");
-        return requestLine[1];
+        return requestLine.get("requestURI");
+    }
+    
+    public String getRequestLine() {
+        return requestLine.get("requestMethod") + " " + requestLine.get("requestURI") + " " + protocolVersion;
     }
 }

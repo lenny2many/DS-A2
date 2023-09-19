@@ -140,6 +140,7 @@ public class AggregationServer extends HTTPServer {
         JSONObject weatherData = null;
         try {
             weatherData = new JSONObject(httpRequest.getBody());
+            System.out.println("Received weather data with ID: " + weatherData.get("id"));
         } catch (Exception e) {
             e.printStackTrace();
         }

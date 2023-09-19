@@ -5,12 +5,16 @@ import common.http.messages.HTTPRequest;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public abstract class HTTPServer implements AutoCloseable {
     private final ServerSocket serverSocket;
+    private final ExecutorService threadPool;
 
     public HTTPServer(ServerSocket serverSocket) throws RuntimeException {
         this.serverSocket = serverSocket;
+        threadPool = Executors.newFixedThreadPool(10);
         System.out.println("Server started and listening on port " + serverSocket.getLocalPort());
     }
 
@@ -19,46 +23,67 @@ public abstract class HTTPServer implements AutoCloseable {
     public abstract String handlePOSTRequest(HTTPRequest httpRequest);
     public abstract String handleDELETERequest(HTTPRequest httpRequest);
 
-    public void receiveClientRequest(Socket clientSocket) {
+    public void receiveClientRequest(Socket clientSocket) throws IOException {
         try (HTTPConnection conn = new HTTPConnection(clientSocket);) {
-            HTTPRequest httpRequest = new HTTPRequest(conn.readBuffer());
+            boolean keepAlive = false;
+            do {
+                HTTPRequest httpRequest = (HTTPRequest) conn.readMessage();
 
-            String httpResponse = null;
-            switch (httpRequest.getRequestMethod()) {
-                case "GET":
-                    System.out.println("GET request received: " + httpRequest.getRequestLine());
-                    httpResponse = this.handleGETRequest(httpRequest);
-                    
-                    break;
-                case "PUT":
-                    System.out.println("PUT request received: " + httpRequest.getRequestLine());
-                    httpResponse = this.handlePUTRequest(httpRequest);
-                    break;
-                case "POST":
-                    System.out.println("POST request received");
-                    httpResponse = this.handlePOSTRequest(httpRequest);
-                    break;
-                case "DELETE":
-                    System.out.println("DELETE request received");
-                    httpResponse = this.handleDELETERequest(httpRequest);
-                    break;
-                default:
-                    System.out.println("Invalid request received");
-                    break;
-            }
-
-            conn.sendData(httpResponse);
+                if (httpRequest == null) {
+                    continue;
+                }
+                
+                String httpResponse = null;
+                switch (httpRequest.getRequestMethod()) {
+                    case "GET":
+                        System.out.println("GET request received: " + httpRequest);
+                        httpResponse = this.handleGETRequest(httpRequest);
+                        break;
+                    case "PUT":
+                        System.out.println("PUT request received: " + httpRequest.getRequestLine());
+                        httpResponse = this.handlePUTRequest(httpRequest);
+                        break;
+                    case "POST":
+                        System.out.println("POST request received");
+                        httpResponse = this.handlePOSTRequest(httpRequest);
+                        break;
+                    case "DELETE":
+                        System.out.println("DELETE request received");
+                        httpResponse = this.handleDELETERequest(httpRequest);
+                        break;
+                    default:
+                        System.out.println("Invalid request received");
+                        break;
+                }
+                conn.sendMessage(httpResponse);
+                System.out.println("Response sent");
+                keepAlive = httpRequest.shouldKeepConnectionAlive();
+            } while (keepAlive);
         } catch (Exception e) {
             e.printStackTrace();
         }
-        
     }
     
     public void run() {
         while (true) {
-            try (Socket clientSocket = serverSocket.accept();) {
+            try {
+                final Socket clientSocket = serverSocket.accept();
                 System.out.println("Received a connection from " + clientSocket.getInetAddress());
-                this.receiveClientRequest(clientSocket);
+
+                threadPool.submit(() -> {
+                    try {
+                        this.receiveClientRequest(clientSocket);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    } finally {
+                        try {
+                            clientSocket.close();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
+
             } catch (IOException e) {
                 e.printStackTrace();
             }

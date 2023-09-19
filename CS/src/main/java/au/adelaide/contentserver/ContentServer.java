@@ -40,12 +40,12 @@ public class ContentServer extends HTTPClient {
 
         String host = argMap.getOrDefault("host", DEFAULT_HOST);
         int port = Integer.parseInt(argMap.getOrDefault("port", DEFAULT_PORT));
-        Socket socket = new Socket(host, port);
+        // Socket socket = new Socket(host, port);
+        String weatherDataFilePath = argMap.getOrDefault("weather", DEFAULT_WEATHER_DATA_FILE);
 
-        try (ContentServer contentServer = new ContentServer(socket)) {
-            String weatherDataFilePath = argMap.getOrDefault("weather", DEFAULT_WEATHER_DATA_FILE);
-            HTTPResponse response = contentServer.sendHTTPRequest(PUT_REQUEST_FILE, weatherDataFilePath);
-            System.out.println("Response from server: " + response);
+        try (Socket socket = new Socket(host, port);
+            ContentServer contentServer = new ContentServer(socket)) {
+            contentServer.sendHTTPRequest(PUT_REQUEST_FILE, weatherDataFilePath, RESOURCE_PATH + "London.txt");
         }
     }
 }

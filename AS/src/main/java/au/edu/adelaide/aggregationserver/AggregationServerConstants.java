@@ -4,7 +4,7 @@ public class AggregationServerConstants {
 
     // AGGREGATION SERVER DEFAULTS
     public static final String DEFAULT_PORT = "4567";
-    public static final String URI_PREFIX = "data/";
+    public static final String URI_PREFIX = "/data/";
     public static final String BASE_STORAGE_PATH = "src/main/resources/";
     public static final String FILE_EXTENSION = ".weather";
     public static final String STATION_FILE = BASE_STORAGE_PATH + URI_PREFIX + "weatherUpdatesByStation" + FILE_EXTENSION;

@@ -1,18 +1,26 @@
 package common.http.messages;
 
+import java.util.Map;
+
 public class HTTPResponse extends HTTPMessage {
+    private String statusCode;
 
-    public HTTPResponse(String message) {
-        super(message);
+    public HTTPResponse(HTTPMessage httpMessage, String statusCode) {
+        this.statusCode = statusCode;
     }
 
-    public HTTPResponse(HTTPMessage httpMessage) {
-        super(httpMessage.toString());
+    public String getStatusCode() {
+        return statusCode;
     }
 
-    public int getStatusCode() {
-        String[] lines = getHeader().split("\r\n");
-        String[] statusLine = lines[0].split(" ");
-        return Integer.parseInt(statusLine[1]);
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("HTTP/1.1 " + statusCode + "\r\n");
+        for (Map.Entry<String, String> entry : headers.entrySet()) {
+            sb.append(entry.getKey() + ": " + entry.getValue() + "\r\n");
+        }
+        sb.append("\r\n");
+        sb.append(getBody());
+        return sb.toString();
     }
 }
