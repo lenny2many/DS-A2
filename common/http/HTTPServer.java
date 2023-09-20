@@ -36,11 +36,11 @@ public abstract class HTTPServer implements AutoCloseable {
                 String httpResponse = null;
                 switch (httpRequest.getRequestMethod()) {
                     case "GET":
-                        System.out.println("GET request received: " + httpRequest);
+                        System.out.println("GET request received: \n" + httpRequest.getRequestLine() + "\n");
                         httpResponse = this.handleGETRequest(httpRequest);
                         break;
                     case "PUT":
-                        System.out.println("PUT request received: " + httpRequest.getRequestLine());
+                        System.out.println("PUT request received: \n" + httpRequest.getRequestLine() + "\n");
                         httpResponse = this.handlePUTRequest(httpRequest);
                         break;
                     case "POST":
@@ -56,8 +56,12 @@ public abstract class HTTPServer implements AutoCloseable {
                         break;
                 }
                 conn.sendMessage(httpResponse);
-                System.out.println("Response sent");
-                keepAlive = httpRequest.shouldKeepConnectionAlive();
+                if (keepAlive = httpRequest.shouldKeepConnectionAlive()) {
+                    System.out.println("Client is keeping connection alive\n");
+                    System.out.println("----------------------------------------\n");
+                } else {
+                    System.out.println("Client is closing connection");
+                }
             } while (keepAlive);
         } catch (Exception e) {
             e.printStackTrace();

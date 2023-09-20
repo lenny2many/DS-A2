@@ -60,7 +60,7 @@ public class JSONObject implements Serializable {
         return keyValMap.get(key);
     }
 
-    public String toJsonString() {
+    public String toJSONString() {
         StringBuilder sb = new StringBuilder();
         sb.append("{\n");
         for (Map.Entry<String, String> entry : keyValMap.entrySet()) {

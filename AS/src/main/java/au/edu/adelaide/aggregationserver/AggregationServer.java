@@ -14,11 +14,18 @@ import java.nio.file.Paths;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.stream.Collectors;
+import java.util.Collections;
+import java.util.stream.Stream;
+
+import javax.sound.midi.SysexMessage;
+
 import java.util.List;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
+
 
 import common.util.CLI;
 import common.http.HTTPServer;
@@ -79,9 +86,75 @@ public class AggregationServer extends HTTPServer {
     @Override
     public String handleGETRequest(HTTPRequest httpRequest) {
         try {
-            WeatherUpdate mostRecentWeatherData = aggregatedWeatherUpdates.getMostRecentWeatherUpdate();
-            String responseBody = mostRecentWeatherData.weatherData.toSimpleListString();
+            String requestURI = httpRequest.getRequestURI();
+            String[] requestURIComponents = requestURI.split("/");
+            if (requestURIComponents.length > 1) {
+                switch (requestURIComponents[1]) {
+                    case "heartbeat":
+                        UUID contentServerUUID = UUID.fromString(requestURIComponents[2]);
+                        String response = handleHeartbeatRequest(httpRequest, contentServerUUID);
+                        return response;
+                    case "weather":
+                        String weatherStationId = requestURIComponents[2];
+                        return handleWeatherRequest(httpRequest, weatherStationId);
+                    case "shutdown":
+                        UUID contentServerUUID2 = UUID.fromString(requestURIComponents[2]);
+                        return handleContentServerShutdownRequest(httpRequest, contentServerUUID2);
+                    default:
+                        throw new IllegalArgumentException("Invalid request URI");
+                }
+            } else if (requestURI.equals("/")) {
+                return handleWeatherRequest(httpRequest, "recent");
+            }
+            else {
+                throw new IllegalArgumentException("Invalid request URI");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return buildResponse(INTERNAL_SERVER_ERROR_STATUS_CODE, 
+                                 ERROR_RESPONSE + ZonedDateTime.now());
+        }
+    }
+
+    private String handleHeartbeatRequest(HTTPRequest httpRequest, UUID contentServerUUID) {
+        try {
+            System.out.println("Received heartbeat from: " + contentServerUUID);
+            aggregatedWeatherUpdates.updateContentServerTimestamp(contentServerUUID);
+            return buildResponse(OK_STATUS_CODE, 
+                                 HEARTBEAT_RESPONSE + ZonedDateTime.now());
+        } catch (Exception e) {
+            e.printStackTrace();
+            return buildResponse(INTERNAL_SERVER_ERROR_STATUS_CODE, 
+                                 ERROR_RESPONSE + ZonedDateTime.now());
+        }
+    }
+
+    private String handleWeatherRequest(HTTPRequest httpRequest, String weatherStationId) {
+        try {
+            String responseBody = null;
+            if (weatherStationId == "recent") {
+                responseBody = aggregatedWeatherUpdates.getMostRecentWeatherUpdate().weatherData.toJSONString();
+            } else {
+                responseBody = aggregatedWeatherUpdates.getMostRecentUpdateByStation(weatherStationId).weatherData.toJSONString();
+            }
             return buildResponse(OK_STATUS_CODE, responseBody);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return buildResponse(INTERNAL_SERVER_ERROR_STATUS_CODE, 
+                                 ERROR_RESPONSE + ZonedDateTime.now());
+        }
+    }
+    
+    private String handleContentServerShutdownRequest(HTTPRequest httpRequest, UUID contentServerUUID) {
+        try {
+            System.out.println("Received graceful shutdown request for content server: " + contentServerUUID);
+            CleanupUtility.removeStaleContentServerData(aggregatedWeatherUpdates, contentServerUUID);
+            Map<String, String> headers = new HashMap<>();
+            headers.put("Connection", "close");
+            headers = Collections.unmodifiableMap(headers);
+            return buildResponse(OK_STATUS_CODE, 
+                                 SHUTDOWN_RESPONSE + ZonedDateTime.now(),
+                                 headers);
         } catch (Exception e) {
             e.printStackTrace();
             return buildResponse(INTERNAL_SERVER_ERROR_STATUS_CODE, 
@@ -125,8 +198,21 @@ public class AggregationServer extends HTTPServer {
     }
 
     private String buildResponse(String statusCode, String response) {
-        return String.format("HTTP/1.1 %s\r\nContent-Length: %d\r\n\r\n%s\r\n", statusCode, response.length(), response);
+        return buildResponse(statusCode, response, Collections.emptyMap());
     }
+    
+    private String buildResponse(String statusCode, String response, Map<String, String> headers) {
+        StringBuilder responseBuilder = new StringBuilder();
+        responseBuilder.append("HTTP/1.1 " + statusCode + "\r\n");
+        responseBuilder.append("Date: " + ZonedDateTime.now() + "\r\n");
+        responseBuilder.append("Server: AggregationServer\r\n");
+        responseBuilder.append("Content-Length: " + response.length() + "\r\n");
+        responseBuilder.append("Connection: " + headers.getOrDefault("Connection", "keep-alive") + "\r\n");
+        
+        responseBuilder.append("\r\n");
+        responseBuilder.append(response);
+        return responseBuilder.toString();
+    }    
 
     private void persistNewestData(AggregatedWeatherUpdates aggregatedWeatherUpdates, UUID contentServerUUID) throws IOException {
         String serverSpecificFile = BASE_STORAGE_PATH + URI_PREFIX + contentServerUUID + FILE_EXTENSION;
@@ -213,6 +299,13 @@ class AggregatedWeatherUpdates implements Serializable {
         mostRecentUpdatesByStation.put(weatherStationId, update);
     }
 
+    public void updateContentServerTimestamp(UUID contentServerUUID) {
+        LinkedList<WeatherUpdate> updates = contentServerUpdates.get(contentServerUUID);
+        if (updates != null && !updates.isEmpty()) {
+            updates.getFirst().timestamp = ZonedDateTime.now();
+        }
+    }
+
     public WeatherUpdate getMostRecentWeatherUpdate() {
         if (mostRecentUpdatesByStation.isEmpty()) {
             return null;
@@ -284,7 +377,7 @@ class CleanupUtility {
         return staleUUIDs;
     }
 
-    private static void removeStaleContentServerData(AggregatedWeatherUpdates aggregatedWeatherUpdates, UUID uuid) {
+    public static void removeStaleContentServerData(AggregatedWeatherUpdates aggregatedWeatherUpdates, UUID uuid) {
         // Remove content server
         aggregatedWeatherUpdates.removeContentServer(uuid);
 

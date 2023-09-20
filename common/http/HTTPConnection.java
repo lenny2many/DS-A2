@@ -15,6 +15,7 @@ public class HTTPConnection implements AutoCloseable {
 
     public HTTPConnection(Socket socket) throws IOException {
         this.socket = socket;
+        this.socket.setSoTimeout(20000);
         this.out = new OutputStreamWriter(socket.getOutputStream(), "UTF-8");
         this.in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
     }
@@ -22,21 +23,24 @@ public class HTTPConnection implements AutoCloseable {
     public void sendMessage(String message) throws IOException {
         out.write(message, 0, message.length());
         out.flush();
+        System.out.println("Message sent: \n" + message);
     }
 
     public HTTPMessage readMessage() throws IOException {
         HTTPMessage httpMessage = new HTTPMessage();
 
-        httpMessage = readHeaders(httpMessage);
+        httpMessage = readFirstLine(httpMessage);
+        // If not valid first line, return null
         if (httpMessage == null) {
             return null;
         }
+        httpMessage = readHeaders(httpMessage);
         httpMessage = readBody(httpMessage);
 
         return httpMessage;
     }
 
-    private HTTPMessage readHeaders(HTTPMessage httpMessage) throws IOException {
+    private HTTPMessage readFirstLine(HTTPMessage httpMessage) throws IOException {
         String line = in.readLine();
 
         if (line == null) {
@@ -48,10 +52,14 @@ public class HTTPConnection implements AutoCloseable {
         try {
             httpMessage = httpMessage.determineMessageType(line);
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            throw e;
         }
 
+        return httpMessage;
+    }
+
+    private HTTPMessage readHeaders(HTTPMessage httpMessage) throws IOException {
+        String line;
         // Read all headers in the message until /r/n/r/n or connection closed
         while ((line = in.readLine()) != null && !line.isEmpty()) {            
             String[] parts = line.split(":", 2);
@@ -109,9 +117,16 @@ public class HTTPConnection implements AutoCloseable {
         return httpMessage;
     }
     
-
     @Override
     public void close() throws IOException {
+        in.close();
+        out.close();
+        socket.close();
+    }
+
+    public void manuallyClose() throws IOException {
+        in.close();
+        out.close();
         socket.close();
     }
 }
