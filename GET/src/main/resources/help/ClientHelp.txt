@@ -1,0 +1,14 @@
+Usage: java -cp ./src/main/java au.edu.adelaide.GETClient [OPTIONS]
+
+Options:
+    http://[SERVERNAME]:[PORT]    Connect to the specified server and port
+    --default, -d                 Connect to the default server and port (localhost:4567)
+    --help, -h                    Display this help message and exit
+
+Examples:
+    java GETClient http://example:4567
+    java GETClient example:4567
+
+Defaults:
+    SERVERNAME: localhost
+    PORT: 4567

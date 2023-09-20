@@ -1,4 +1,4 @@
-package au.adelaide.contentserver;
+package au.edu.adelaide.contentserver;
 
 import common.util.CLI;
 import common.http.HTTPClient;
@@ -14,7 +14,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 
-import static au.adelaide.contentserver.ContentServerConstants.*;
+import static au.edu.adelaide.contentserver.ContentServerConstants.*;
 
 public class ContentServer extends HTTPClient implements AutoCloseable {
     private UUID uuid;
@@ -84,7 +84,7 @@ public class ContentServer extends HTTPClient implements AutoCloseable {
             ContentServer contentServer = new ContentServer(socket)) {
             contentServer.startHeartbeat();
             contentServer.sendHTTPRequest(PUT_REQUEST_FILE, weatherDataFilePath);
-            contentServer.sendHTTPRequest(PUT_REQUEST_FILE, RESOURCE_PATH + "London.txt");
+            contentServer.sendHTTPRequest(PUT_REQUEST_FILE, RESOURCE_PATH + "data/London.txt");
             // sleep to see if heartbeat mechanism works
             Thread.sleep(30000);
             System.out.println("Content server shutting down");

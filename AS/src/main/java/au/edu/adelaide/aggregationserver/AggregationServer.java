@@ -25,6 +25,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.LinkedHashMap;
 
 
 import common.util.CLI;
@@ -96,6 +97,7 @@ public class AggregationServer extends HTTPServer {
                         return response;
                     case "weather":
                         String weatherStationId = requestURIComponents[2];
+                        System.out.println("Received weather request for: " + weatherStationId);
                         return handleWeatherRequest(httpRequest, weatherStationId);
                     case "shutdown":
                         UUID contentServerUUID2 = UUID.fromString(requestURIComponents[2]);
@@ -132,7 +134,7 @@ public class AggregationServer extends HTTPServer {
     private String handleWeatherRequest(HTTPRequest httpRequest, String weatherStationId) {
         try {
             String responseBody = null;
-            if (weatherStationId == "recent") {
+            if (weatherStationId.equals("recent")) {
                 responseBody = aggregatedWeatherUpdates.getMostRecentWeatherUpdate().weatherData.toJSONString();
             } else {
                 responseBody = aggregatedWeatherUpdates.getMostRecentUpdateByStation(weatherStationId).weatherData.toJSONString();
@@ -279,7 +281,7 @@ class WeatherUpdate implements Serializable {
 class AggregatedWeatherUpdates implements Serializable {
     private static final long serialVersionUID = 1L;
     Map<UUID, LinkedList<WeatherUpdate>> contentServerUpdates = new HashMap<>();
-    Map<String, WeatherUpdate> mostRecentUpdatesByStation = new HashMap<>();
+    Map<String, WeatherUpdate> mostRecentUpdatesByStation = new LinkedHashMap<>();
 
     public void addUpdate(WeatherUpdate update, String weatherStationId) {
         addContentServerUpdate(update);
@@ -307,10 +309,10 @@ class AggregatedWeatherUpdates implements Serializable {
     }
 
     public WeatherUpdate getMostRecentWeatherUpdate() {
-        if (mostRecentUpdatesByStation.isEmpty()) {
-            return null;
+        if (!mostRecentUpdatesByStation.isEmpty()) {
+            return mostRecentUpdatesByStation.entrySet().iterator().next().getValue();
         }
-        return mostRecentUpdatesByStation.get(0);
+        throw new RuntimeException("No weather updates exist.");
     }
 
     public WeatherUpdate getMostRecentUpdateByStation(String weatherStationId) {

@@ -1,2 +1,4 @@
-*.class
+bin
 AS/src/main/resources/data/*
+CS/src/main/resources/data/*
+GET/src/main/resources/data/*

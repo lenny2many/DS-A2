@@ -46,7 +46,7 @@ public class HTTPConnection implements AutoCloseable {
         if (line == null) {
             throw new IOException("Connection closed");
         } else if (line.isEmpty()) {
-            return null; // End of headers
+            return null;
         }
 
         try {
