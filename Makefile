@@ -2,7 +2,8 @@
 JFLAGS = -cp ".:./src/main/java/:./lib/logging/*:../bin"
 SRCDIR = src/main/java
 BINDIR = ./bin
-COMMON = au/edu/adelaide
+PACKAGE = au/edu/adelaide
+COMMON = ../common
 
 # Target: all
 all: compile
@@ -14,13 +15,13 @@ create_bin:
 	mkdir -p $(BINDIR)
 
 compile_as: create_bin
-	cd AS && javac $(JFLAGS) -d .$(BINDIR) $(SRCDIR)/$(COMMON)/aggregationserver/AggregationServer.java
+	cd AS && cp -r $(COMMON) $(SRCDIR) && javac $(JFLAGS) -d .$(BINDIR) $(SRCDIR)/$(PACKAGE)/aggregationserver/AggregationServer.java
 
 compile_cs: create_bin
-	cd CS && javac $(JFLAGS) -d .$(BINDIR) $(SRCDIR)/$(COMMON)/contentserver/ContentServer.java
+	cd CS && cp -r $(COMMON) $(SRCDIR) && javac $(JFLAGS) -d .$(BINDIR) $(SRCDIR)/$(PACKAGE)/contentserver/ContentServer.java
 
 compile_client: create_bin
-	cd GET && javac $(JFLAGS) -d .$(BINDIR) $(SRCDIR)/$(COMMON)/client/GETClient.java
+	cd GET && cp -r $(COMMON) $(SRCDIR) && javac $(JFLAGS) -d .$(BINDIR) $(SRCDIR)/$(PACKAGE)/client/GETClient.java
 
 compile_common: create_bin
 	javac $(JFLAGS) -d $(BINDIR) ./common/http/*.java
@@ -28,13 +29,13 @@ compile_common: create_bin
 	javac $(JFLAGS) -d $(BINDIR) ./common/util/*.java
 
 run_as:
-	cd AS && java $(JFLAGS) $(COMMON).aggregationserver.AggregationServer --default
+	cd AS && java $(JFLAGS) $(PACKAGE).aggregationserver.AggregationServer --default
 
 run_cs:
-	cd CS && java $(JFLAGS) $(COMMON).contentserver.ContentServer --default
+	cd CS && java $(JFLAGS) $(PACKAGE).contentserver.ContentServer --default
 
 run_client:
-	cd GET && java $(JFLAGS) $(COMMON).client.GETClient --default
+	cd GET && java $(JFLAGS) $(PACKAGE).client.GETClient --default
 
 # Clean targets
 clean:

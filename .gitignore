@@ -1,4 +1,7 @@
 bin
 AS/src/main/resources/data/*
+AS/src/main/java/common/
 CS/src/main/resources/data/*
+CS/src/main/java/common/
 GET/src/main/resources/data/*
+GET/src/main/java/common/
