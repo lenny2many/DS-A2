@@ -1,7 +1,7 @@
 # Variables
 JFLAGS = -cp ".:./src/main/java/:./lib/logging/*:../bin"
 SRCDIR = src/main/java
-BINDIR = ../bin
+BINDIR = ./bin
 COMMON = au/edu/adelaide
 
 # Target: all
@@ -14,13 +14,13 @@ create_bin:
 	mkdir -p $(BINDIR)
 
 compile_as: create_bin
-	cd AS && javac $(JFLAGS) -d $(BINDIR) $(SRCDIR)/$(COMMON)/aggregationserver/AggregationServer.java
+	cd AS && javac $(JFLAGS) -d .$(BINDIR) $(SRCDIR)/$(COMMON)/aggregationserver/AggregationServer.java
 
 compile_cs: create_bin
-	cd CS && javac $(JFLAGS) -d $(BINDIR) $(SRCDIR)/$(COMMON)/contentserver/ContentServer.java
+	cd CS && javac $(JFLAGS) -d .$(BINDIR) $(SRCDIR)/$(COMMON)/contentserver/ContentServer.java
 
 compile_client: create_bin
-	cd GET && javac $(JFLAGS) -d $(BINDIR) $(SRCDIR)/$(COMMON)/client/GETClient.java
+	cd GET && javac $(JFLAGS) -d .$(BINDIR) $(SRCDIR)/$(COMMON)/client/GETClient.java
 
 compile_common: create_bin
 	javac $(JFLAGS) -d $(BINDIR) ./common/http/*.java
