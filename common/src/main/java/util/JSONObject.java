@@ -1,4 +1,4 @@
-package common.util;
+package util;
 
 import java.util.Map;
 import java.util.regex.Matcher;

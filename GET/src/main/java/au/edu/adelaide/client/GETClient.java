@@ -5,25 +5,33 @@ import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Map;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.OutputStreamWriter;
+import java.io.InputStreamReader;
+import java.io.Writer;
 
 import static au.edu.adelaide.client.GETClientConstants.*;
 
-import common.http.HTTPClient;
-import common.http.messages.HTTPResponse;
-import common.util.JSONObject;
-import common.util.CLI;
-import common.util.IOUtility;
+import http.HTTPClient;
+import http.messages.HTTPResponse;
+import util.JSONObject;
+import util.CLI;
+import util.IOUtility;
 
 public class GETClient extends HTTPClient {
-    public GETClient(Socket socket) throws IOException {
-        super(socket);
+    private IOUtility ioUtility;
+
+    public GETClient(Socket socket, Writer out, BufferedReader in) throws IOException {
+        super(socket, out, in);
+        ioUtility = new IOUtility();
     }
 
     private static final String request_location = "client/resources/GETRequest.txt";
 
     @Override
     protected String buildRequest(String request_location, String... payload_file) throws IOException {
-        String request = IOUtility.readTxtFile(request_location);
+        String request = ioUtility.readTxtFile(request_location);
 
         if (payload_file[0] == null) return request;
         String URI = payload_file[0];
@@ -41,7 +49,9 @@ public class GETClient extends HTTPClient {
         String URI = argMap.getOrDefault("URI", "recent");
 
         try (Socket socket = new Socket(host, port);
-            GETClient client = new GETClient(socket);) {
+            BufferedWriter out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            GETClient client = new GETClient(socket, out, in)) {
                 client.sendHTTPRequest(request_location, URI);
         } catch (IOException e) {
             e.printStackTrace();

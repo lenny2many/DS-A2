@@ -1,7 +1,12 @@
 bin
 AS/src/main/resources/data/*
-AS/src/main/java/common/
+AS/src/main/java/http/*
+AS/src/main/java/util/*
+
 CS/src/main/resources/data/*
-CS/src/main/java/common/
+CS/src/main/java/http/*
+CS/src/main/java/util/*
+
 GET/src/main/resources/data/*
-GET/src/main/java/common/
+GET/src/main/java/http/*
+GET/src/main/java/util/*

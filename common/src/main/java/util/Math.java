@@ -1,4 +1,4 @@
-package common.util;
+package util;
 
 public class Math {
     

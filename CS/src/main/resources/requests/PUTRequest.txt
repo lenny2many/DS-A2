@@ -1,6 +1,8 @@
 PUT /data/{{UUID}} HTTP/1.1
 User-Agent: ATOMClient/1/0
+Content-Type: application/json
 Content-Length: {{payload_length}}
 Connection: keep-alive
+Timestamp: 0
 
 {{payload}}

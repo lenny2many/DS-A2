@@ -1,4 +1,4 @@
-package common.util;
+package util;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -13,7 +13,8 @@ public class CLI {
 
     public static CLI initialiseCLI(String helpFilePath) {
     try {
-        return new CLI(IOUtility.readTxtFile(helpFilePath));
+        IOUtility ioUtility = new IOUtility();
+        return new CLI(ioUtility.readTxtFile(helpFilePath));
     } catch (IOException e) {
         e.printStackTrace();
         return null;
